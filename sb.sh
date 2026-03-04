@@ -58,12 +58,11 @@ bbr="Openvz/Lxc"
 fi
 hostname=$(hostname)
 
-touch sbyg_update
 if [ ! -f sbyg_update ]; then
 green "首次安装Sing-box-yg脚本必要的依赖……"
 if [[ x"${release}" == x"alpine" ]]; then
 apk update
-apk add jq openssl iproute2 iputils coreutils expect git socat iptables grep tar tzdata dcron util-linux
+apk add jq openssl procps iproute2 iputils coreutils expect git socat iptables grep tar tzdata dcron util-linux
 apk add virt-what
 else
 if [[ $release = Centos && ${vsid} =~ 8 ]]; then
@@ -134,8 +133,8 @@ fi
 v4v6(){
 v4=$(curl -s4m5 icanhazip.com -k)
 v6=$(curl -s6m5 icanhazip.com -k)
-v4dq=$(curl -s4m5 -k https://ip.fm | sed -E 's/.*Location: ([^,]+,[^,]+,[^,]+),.*/\1/' 2>/dev/null)
-v6dq=$(curl -s6m5 -k https://ip.fm | sed -E 's/.*Location: ([^,]+,[^,]+,[^,]+),.*/\1/' 2>/dev/null)
+v4dq=$(curl -s4m5 -k https://ip.fm | sed -n 's/.*Location: //p' 2>/dev/null)
+v6dq=$(curl -s6m5 -k https://ip.fm | sed -n 's/.*Location: //p' 2>/dev/null)
 }
 warpcheck(){
 wgcfv6=$(curl -s6m5 https://www.cloudflare.com/cdn-cgi/trace -k | grep warp | cut -d= -f2)
@@ -155,12 +154,8 @@ ipv=prefer_ipv4
 fi
 if [ -n "$(curl -s6m5 icanhazip.com -k)" ]; then
 endip="2606:4700:d0::a29f:c001"
-xsdns="[2001:4860:4860::8888]"
-sbyx="ipv6_only"
 else
 endip="162.159.192.1"
-xsdns="8.8.8.8"
-sbyx="ipv4_only"
 fi
 }
 warpcheck
@@ -178,7 +173,6 @@ fi
 }
 
 argopid(){
-ym=$(cat /etc/s-box/sbargoympid.log 2>/dev/null)
 ls=$(cat /etc/s-box/sbargopid.log 2>/dev/null)
 }
 
@@ -819,15 +813,15 @@ cat > /etc/s-box/sb11.json <<EOF
 ]
 }
 ],
- "dns": {
-    "servers": [
-      {
-        "type": "https",
-        "server": "${xsdns}"
-      }
-    ],
-    "strategy": "${sbyx}"
-  },
+
+
+
+
+
+
+
+
+
 "outbounds": [
 {
 "type":"direct",
@@ -1129,7 +1123,7 @@ echo "二维码【v2rayn、v2rayng、nekobox、小火箭shadowrocket】"
 echo 'vmess://'$(echo '{"add":"'$vmadd_argo'","aid":"0","host":"'$argo'","id":"'$uuid'","net":"ws","path":"'$ws_path'","port":"8443","ps":"'vm-argo-$hostname'","tls":"tls","sni":"'$argo'","fp":"chrome","type":"none","v":"2"}' | base64 -w 0) > /etc/s-box/vm_ws_argols.txt
 qrencode -o - -t ANSIUTF8 "$(cat /etc/s-box/vm_ws_argols.txt)"
 fi
-if [[ -n $(ps -e | grep -w $ym 2>/dev/null) ]]; then
+if ps -ef | grep -q '[c]loudflared.*run'; then
 argogd=$(cat /etc/s-box/sbargoym.log 2>/dev/null)
 echo
 white "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -1613,7 +1607,7 @@ EOF
 
 tls=$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.inbounds[1].tls.enabled')
 argopid
-if [[ -n $(ps -e | grep -w $ym 2>/dev/null) && -n $(ps -e | grep -w $ls 2>/dev/null) && "$tls" = "false" ]]; then
+if ps -ef | grep -q '[c]loudflared.*run' && ps -e | grep -qw "$ls" 2>/dev/null && [ "$tls" = "false" ]; then
 cat > /etc/s-box/sing_box_client.json <<EOF
 $(sball)
 $(sbany2)
@@ -1892,8 +1886,7 @@ rules:
   - MATCH,🌍选择代理节点
 EOF
 
-
-elif [[ ! -n $(ps -e | grep -w $ym 2>/dev/null) && -n $(ps -e | grep -w $ls 2>/dev/null) && "$tls" = "false" ]]; then
+elif ! ps -ef | grep -q '[c]loudflared.*run' && ps -e | grep -qw "$ls" 2>/dev/null && [ "$tls" = "false" ]; then
 cat > /etc/s-box/sing_box_client.json <<EOF
 $(sball)
 $(sbany2)
@@ -2082,7 +2075,7 @@ rules:
   - MATCH,🌍选择代理节点
 EOF
 
-elif [[ -n $(ps -e | grep -w $ym 2>/dev/null) && ! -n $(ps -e | grep -w $ls 2>/dev/null) && "$tls" = "false" ]]; then
+elif ps -ef | grep -q '[c]loudflared.*run' && ! ps -e | grep -qw "$ls" 2>/dev/null && [ "$tls" = "false" ]; then
 cat > /etc/s-box/sing_box_client.json <<EOF
 $(sball)
 $(sbany2)
@@ -2405,9 +2398,8 @@ if [ "$menu" = "1" ]; then
 cloudflaredargo
 readp "输入Argo固定隧道Token: " argotoken
 readp "输入Argo固定隧道域名: " argoym
-if [[ -n $(ps -e | grep cloudflared) ]]; then
-kill -15 $(cat /etc/s-box/sbargoympid.log 2>/dev/null) >/dev/null 2>&1
-fi
+pid=$(ps -ef | awk '/[c]loudflared.*run/ {print $2}')
+[ -n "$pid" ] && kill -9 "$pid" >/dev/null 2>&1
 echo
 if [[ -n "${argotoken}" && -n "${argoym}" ]]; then
 if pidof systemd >/dev/null 2>&1; then
@@ -2419,7 +2411,7 @@ After=network.target
 Type=simple
 NoNewPrivileges=yes
 TimeoutStartSec=0
-ExecStart=/root/agsbx/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${argotoken}"
+ExecStart=/etc/s-box/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token "${argotoken}"
 Restart=on-failure
 RestartSec=5s
 [Install]
@@ -2443,28 +2435,13 @@ EOF
 chmod +x /etc/init.d/argo >/dev/null 2>&1
 rc-update add argo default >/dev/null 2>&1
 rc-service argo start >/dev/null 2>&1
-else
-nohup setsid /etc/s-box/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token ${argotoken} >/dev/null 2>&1 & echo "$!" > /etc/s-box/sbargoympid.log
-sleep 20
 fi
 fi
 echo ${argoym} > /etc/s-box/sbargoym.log
 echo ${argotoken} > /etc/s-box/sbargotoken.log
-if ! pidof systemd >/dev/null 2>&1 && ! command -v rc-service >/dev/null 2>&1; then
-crontab -l 2>/dev/null > /tmp/crontab.tmp
-sed -i '/sbargoympid/d' /tmp/crontab.tmp
-echo '@reboot sleep 10 && /bin/bash -c "nohup setsid /etc/s-box/cloudflared tunnel --no-autoupdate --edge-ip-version auto --protocol http2 run --token $(cat /etc/s-box/sbargotoken.log 2>/dev/null) >/dev/null 2>&1 & pid=\$! && echo \$pid > /etc/s-box/sbargoympid.log"' >> /tmp/crontab.tmp
-crontab /tmp/crontab.tmp >/dev/null 2>&1
-rm /tmp/crontab.tmp
-fi
 argo=$(cat /etc/s-box/sbargoym.log 2>/dev/null)
 blue "Argo固定隧道设置完成，固定域名：$argo"
 elif [ "$menu" = "2" ]; then
-kill -15 $(cat /etc/s-box/sbargoympid.log 2>/dev/null) >/dev/null 2>&1
-crontab -l 2>/dev/null > /tmp/crontab.tmp
-sed -i '/sbargoympid/d' /tmp/crontab.tmp
-crontab /tmp/crontab.tmp >/dev/null 2>&1
-rm /tmp/crontab.tmp
 if pidof systemd >/dev/null 2>&1; then
 systemctl stop argo >/dev/null 2>&1
 systemctl disable argo >/dev/null 2>&1
@@ -3746,7 +3723,6 @@ uncronsb(){
 crontab -l 2>/dev/null > /tmp/crontab.tmp
 sed -i '/sing-box/d' /tmp/crontab.tmp
 sed -i '/sbargopid/d' /tmp/crontab.tmp
-sed -i '/sbargoympid/d' /tmp/crontab.tmp
 sed -i '/sbwpphid.log/d' /tmp/crontab.tmp
 crontab /tmp/crontab.tmp >/dev/null 2>&1
 rm /tmp/crontab.tmp
@@ -3838,7 +3814,6 @@ done
 rm -rf /etc/systemd/system/{sing-box.service,argo.service}
 fi
 kill -15 $(cat /etc/s-box/sbargopid.log 2>/dev/null) >/dev/null 2>&1
-kill -15 $(cat /etc/s-box/sbargoympid.log 2>/dev/null) >/dev/null 2>&1
 kill -15 $(cat /etc/s-box/sbwpphid.log 2>/dev/null) >/dev/null 2>&1
 rm -rf /etc/s-box sbyg_update /usr/bin/sb /root/geoip.db /root/geosite.db /root/warpapi /root/warpip
 uncronsb
@@ -3956,7 +3931,7 @@ sbymfl
 tls=$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.inbounds[1].tls.enabled')
 if [[ "$tls" = "false" ]]; then
 argopid
-if [[ -n $(ps -e | grep -w $ym 2>/dev/null) || -n $(ps -e | grep -w $ls 2>/dev/null) ]]; then
+if ps -ef | grep -q '[c]loudflared.*run' || ps -e | grep -w $ls 2>/dev/null; then
 vm_zs="TLS关闭"
 argoym="已开启"
 else
@@ -3991,7 +3966,7 @@ echo -e "Vmess-Path：${yellow}$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.in
 if [[ -n $(ps -e | grep -w $ls 2>/dev/null) ]]; then
 echo -e "Argo临时域名：${yellow}$(cat /etc/s-box/argo.log 2>/dev/null | grep -a trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')${plain}"
 fi
-if [[ -n $(ps -e | grep -w $ym 2>/dev/null) ]]; then
+if ps -ef | grep -q '[c]loudflared.*run'; then
 echo -e "Argo固定域名：${yellow}$(cat /etc/s-box/sbargoym.log 2>/dev/null)${plain}"
 fi
 fi
@@ -4198,9 +4173,8 @@ blue "sing-box-yg脚本博客说明：http://ygkkk.blogspot.com/2023/10/sing-box
 echo
 blue "sing-box-yg脚本项目地址：https://github.com/yonggekkk/sing-box-yg"
 echo
-blue "推荐甬哥新品：ArgoSB一键无交互小钢炮脚本"
-blue "支持：AnyTLS、Any-reality、Vless-xhttp-reality、Vless-reality-vision、Shadowsocks-2022、Hysteria2、Tuic、Vmess-ws、Argo临时/固定隧道"
-blue "ArgoSB项目地址：https://github.com/yonggekkk/ArgoSB"
+blue "推荐甬哥新品：ArgoSBX一键无交互小钢炮脚本"
+blue "ArgoSBX项目地址：https://github.com/yonggekkk/argosbx"
 echo
 }
 
