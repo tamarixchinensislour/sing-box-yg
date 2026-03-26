@@ -1,4 +1,5 @@
 #!/bin/bash
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export LANG=en_US.UTF-8
 red='\033[0;31m'
 green='\033[0;32m'
@@ -62,7 +63,7 @@ if [ ! -f sbyg_update ]; then
 green "首次安装Sing-box-yg脚本必要的依赖……"
 if [[ x"${release}" == x"alpine" ]]; then
 apk update
-apk add libc6-compat jq openssl procps busybox iproute2 iputils coreutils expect git socat iptables grep tar tzdata dcron util-linux
+apk add libc6-compat jq openssl procps busybox-extras iproute2 iputils coreutils expect git socat iptables grep tar tzdata util-linux
 apk add virt-what
 else
 if [[ $release = Centos && ${vsid} =~ 8 ]]; then
@@ -1114,7 +1115,7 @@ echo "二维码【v2rayn、v2rayng、nekobox、小火箭shadowrocket】"
 echo 'vmess://'$(echo '{"add":"'$vmadd_argo'","aid":"0","host":"'$argo'","id":"'$uuid'","net":"ws","path":"'$ws_path'","port":"8443","ps":"'vm-argo-$hostname'","tls":"tls","sni":"'$argo'","fp":"chrome","type":"none","v":"2"}' | base64 -w 0) > /etc/s-box/vm_ws_argols.txt
 qrencode -o - -t ANSIUTF8 "$(cat /etc/s-box/vm_ws_argols.txt)"
 fi
-if ps -ef | grep -q '[c]loudflared.*run'; then
+if ps -ef 2>/dev/null | grep -q '[c]loudflared.*run'; then
 argogd=$(cat /etc/s-box/sbargoym.log 2>/dev/null)
 echo
 white "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -1597,7 +1598,7 @@ EOF
 
 tls=$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.inbounds[1].tls.enabled')
 argopid
-if ps -ef | grep -q '[c]loudflared.*run' && ps -p "$ls" >/dev/null 2>&1 && [ "$tls" = "false" ]; then
+if ps -ef 2>/dev/null | grep -q '[c]loudflared.*run' && ps -p "$ls" >/dev/null 2>&1 && [ "$tls" = "false" ]; then
 cat > /etc/s-box/sbox.json <<EOF
 $(sball)
 $(sbany2)
@@ -1876,7 +1877,7 @@ rules:
   - MATCH,🌍选择代理节点
 EOF
 
-elif ! ps -ef | grep -q '[c]loudflared.*run' && ps -p "$ls" >/dev/null 2>&1 && [ "$tls" = "false" ]; then
+elif ! ps -ef 2>/dev/null | grep -q '[c]loudflared.*run' && ps -p "$ls" >/dev/null 2>&1 && [ "$tls" = "false" ]; then
 cat > /etc/s-box/sbox.json <<EOF
 $(sball)
 $(sbany2)
@@ -2065,7 +2066,7 @@ rules:
   - MATCH,🌍选择代理节点
 EOF
 
-elif ps -ef | grep -q '[c]loudflared.*run' && ! ps -p "$ls" >/dev/null 2>&1 && [ "$tls" = "false" ]; then
+elif ps -ef 2>/dev/null | grep -q '[c]loudflared.*run' && ! ps -p "$ls" >/dev/null 2>&1 && [ "$tls" = "false" ]; then
 cat > /etc/s-box/sbox.json <<EOF
 $(sball)
 $(sbany2)
@@ -2388,7 +2389,7 @@ if [ "$menu" = "1" ]; then
 cloudflaredargo
 readp "输入Argo固定隧道Token: " argotoken
 readp "输入Argo固定隧道域名: " argoym
-pid=$(ps -ef | awk '/[c]loudflared.*run/ {print $2}')
+pid=$(ps -ef 2>/dev/null | awk '/[c]loudflared.*run/ {print $2}')
 [ -n "$pid" ] && kill -9 "$pid" >/dev/null 2>&1
 echo
 if [[ -n "${argotoken}" && -n "${argoym}" ]]; then
@@ -2471,7 +2472,7 @@ sbshare > /dev/null 2>&1
 blue "Argo临时隧道申请成功，域名验证有效：$argo" && sleep 2
 crontab -l 2>/dev/null > /tmp/crontab.tmp
 sed -i '/sbargopid/d' /tmp/crontab.tmp
-echo '@reboot sleep 10 && /bin/bash -c "nohup /etc/s-box/cloudflared tunnel --url http://localhost:$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.inbounds[1].listen_port') --edge-ip-version auto --no-autoupdate --protocol http2 > /etc/s-box/argo.log 2>&1 & pid=\$! && echo \$pid > /etc/s-box/sbargopid.log"' >> /tmp/crontab.tmp
+echo '@reboot sleep 10 && /bin/bash -c "nohup /etc/s-box/cloudflared tunnel --url http://localhost:$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.inbounds[1].listen_port') --edge-ip-version auto --no-autoupdate --protocol http2 > /etc/s-box/argo.log 2>&1 & pid=\$! && echo \$pid > /etc/s-box/sbargopid.log && sleep 5 && printf \"9\n1\n\" | bash /usr/bin/sb > /dev/null 2>&1"' >> /tmp/crontab.tmp
 crontab /tmp/crontab.tmp >/dev/null 2>&1
 rm /tmp/crontab.tmp
 else
@@ -3124,12 +3125,20 @@ mkdir -p /root/web/"$(cat /etc/s-box/subtoken.log 2>/dev/null)"
 ln -sf /etc/s-box/clmi.yaml /root/web/"$(cat /etc/s-box/subtoken.log 2>/dev/null)"/clmi.yaml
 ln -sf /etc/s-box/sbox.json /root/web/"$(cat /etc/s-box/subtoken.log 2>/dev/null)"/sbox.json
 ln -sf /etc/s-box/jhsub.txt /root/web/"$(cat /etc/s-box/subtoken.log 2>/dev/null)"/jhsub.txt
+if [[ x"${release}" == x"alpine" ]]; then
+busybox-extras httpd -f -p "$(cat /etc/s-box/subport.log 2>/dev/null)" -h /root/web > /dev/null 2>&1 &
+else
 busybox httpd -f -p "$(cat /etc/s-box/subport.log 2>/dev/null)" -h /root/web > /dev/null 2>&1 &
+fi
 echo "$!" > /etc/s-box/subcmsbid.log
 sleep 5
 crontab -l 2>/dev/null > /tmp/crontab.tmp
 sed -i '/subcmsbid/d' /tmp/crontab.tmp
+if [[ x"${release}" == x"alpine" ]]; then
+echo '@reboot sleep 10 && /bin/bash -c "busybox-extras httpd -f -p $(cat /etc/s-box/subport.log 2>/dev/null) -h /root/web > /dev/null 2>&1 & pid=\$! && echo \$pid > /etc/s-box/subcmsbid.log"' >> /tmp/crontab.tmp
+else
 echo '@reboot sleep 10 && /bin/bash -c "busybox httpd -f -p $(cat /etc/s-box/subport.log 2>/dev/null) -h /root/web > /dev/null 2>&1 & pid=\$! && echo \$pid > /etc/s-box/subcmsbid.log"' >> /tmp/crontab.tmp
+fi
 crontab /tmp/crontab.tmp >/dev/null 2>&1
 rm /tmp/crontab.tmp
 sbshare > /dev/null 2>&1
@@ -3985,7 +3994,7 @@ sbymfl
 tls=$(sed 's://.*::g' /etc/s-box/sb.json | jq -r '.inbounds[1].tls.enabled')
 if [[ "$tls" = "false" ]]; then
 argopid
-if ps -ef | grep -q '[c]loudflared.*run' || ps -p "$ls" >/dev/null 2>&1; then
+if ps -ef 2>/dev/null | grep -q '[c]loudflared.*run' || ps -p "$ls" >/dev/null 2>&1; then
 vm_zs="TLS关闭"
 argoym="已开启"
 else
@@ -4029,7 +4038,7 @@ if [ "$argoym" = "已开启" ]; then
 if ps -p "$ls" >/dev/null 2>&1; then
 echo -e "Argo临时域名：${yellow}$(cat /etc/s-box/argo.log 2>/dev/null | grep -a trycloudflare.com | awk 'NR==2{print}' | awk -F// '{print $2}' | awk '{print $1}')${plain}"
 fi
-if ps -ef | grep -q '[c]loudflared.*run'; then
+if ps -ef 2>/dev/null | grep -q '[c]loudflared.*run'; then
 echo -e "Argo固定域名：${yellow}$(cat /etc/s-box/sbargoym.log 2>/dev/null)${plain}"
 fi
 fi
