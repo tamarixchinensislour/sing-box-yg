@@ -1451,7 +1451,6 @@ cat <<EOF
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -1622,7 +1621,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -1649,7 +1647,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -1676,7 +1673,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -1703,7 +1699,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -1903,7 +1898,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -1930,7 +1924,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -2094,7 +2087,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
@@ -2121,7 +2113,6 @@ $(sbany2)
                     "fingerprint": "chrome"
                 }
             },
-            "packet_encoding": "packetaddr",
             "transport": {
                 "headers": {
                     "Host": [
